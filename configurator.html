@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gekimax Web Configurator</title>
+    <style>
+        :root {
+            --bg-base: #0c0f17;
+            --bg-card: rgba(22, 27, 40, 0.75);
+            --bg-card-hover: rgba(30, 38, 58, 0.85);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --border-glow: rgba(0, 240, 255, 0.3);
+            --cyan: #00f0ff;
+            --magenta: #ff007b;
+            --yellow: #ffe600;
+            --orange: #ff3c00;
+            --green: #00ff66;
+            --purple: #a020f0;
+            --text-main: #f0f4fc;
+            --text-muted: #8a99b5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(0, 240, 255, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(255, 0, 123, 0.08) 0%, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(12, 15, 23, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--cyan), var(--magenta));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.1rem;
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        }
+
+        .brand h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(90deg, #fff, #b0c4de);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            padding: 0.35rem 0.8rem;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .status-dot.connected {
+            background: var(--green);
+            box-shadow: 0 0 10px var(--green);
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 0.55rem 1.1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d2ff, #0077ff);
+            border: none;
+            color: #fff;
+            box-shadow: 0 0 15px rgba(0, 180, 255, 0.35);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #00e1ff, #0088ff);
+            box-shadow: 0 0 20px rgba(0, 200, 255, 0.6);
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #00e676, #00b0ff);
+            border: none;
+            color: #000;
+            font-weight: 700;
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.4);
+        }
+
+        .btn-danger {
+            background: rgba(255, 50, 50, 0.15);
+            border-color: rgba(255, 50, 50, 0.3);
+            color: #ff6b6b;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: rgba(255, 50, 50, 0.25);
+            border-color: rgba(255, 50, 50, 0.5);
+        }
+
+        main {
+            flex: 1;
+            padding: 1.5rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .instruction-banner {
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.08), rgba(255, 0, 123, 0.08));
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .instruction-banner p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .instruction-banner strong {
+            color: var(--cyan);
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1120px) {
+            .grid-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 0.75rem;
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #fff;
+        }
+
+        /* Tabs Header */
+        .tabs-header {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 4px;
+            gap: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 0.6rem 0.8rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            border-radius: 7px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 119, 255, 0.2));
+            color: var(--cyan);
+            border: 1px solid rgba(0, 240, 255, 0.4);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+        }
+
+        /* Controller Visualizer Stage */
+        .controller-visualizer {
+            background: #080a10;
+            border-radius: 12px;
+            padding: 1.5rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            position: relative;
+            user-select: none;
+        }
+
+        .controller-body {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 840px;
+            position: relative;
+            gap: 0.5rem;
+        }
+
+        .controller-side {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        /* Interactive Switch Components */
+        .hw-btn {
+            background: #151a26;
+            border: 2px solid #2a344d;
+            border-radius: 8px;
+            min-width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .hw-btn:hover {
+            transform: translateY(-2px);
+            border-color: var(--cyan);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+        }
+
+        .hw-btn.active-edit {
+            border-color: #fff !important;
+            box-shadow: 0 0 15px #fff, inset 0 0 10px rgba(255, 255, 255, 0.3) !important;
+            animation: pulse-border 1.5s infinite;
+        }
+
+        .hw-btn.pressed {
+            transform: scale(0.92);
+            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.8) !important;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { border-color: #fff; }
+            50% { border-color: var(--cyan); }
+        }
+
+        .hw-btn-name {
+            font-size: 0.65rem;
+            color: #8899b5;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .hw-btn-key {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .hw-btn-key.is-none {
+            color: #55627a !important;
+            font-style: italic;
+            font-weight: 500;
+        }
+
+        .hw-btn-rgb-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            position: absolute;
+            top: 4px;
+            right: 4px;
+        }
+
+        /* Specific Button Types */
+        .hw-btn-menu {
+            height: 34px;
+            border-radius: 6px;
+            flex: 1;
+        }
+
+        .hw-btn-side {
+            height: 52px;
+            width: 46px;
+            border-radius: 12px;
+        }
+
+        .hw-btn-rgb {
+            height: 52px;
+            width: 52px;
+            border-radius: 10px;
+        }
+
+        .hw-btn-space {
+            height: 46px;
+            flex: 1;
+        }
+
+        /* Analog Lever Visualizer */
+        .lever-container {
+            width: 100%;
+            max-width: 840px;
+            background: #0f131d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .lever-track {
+            height: 24px;
+            background: #06080d;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #1a2336;
+        }
+
+        .lever-center-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .lever-handle {
+            width: 32px;
+            height: 24px;
+            background: linear-gradient(135deg, var(--cyan), #0077ff);
+            border-radius: 12px;
+            position: absolute;
+            top: 0;
+            left: calc(50% - 16px);
+            transform: translateX(0);
+            box-shadow: 0 0 10px var(--cyan);
+            transition: left 0.05s ease;
+        }
+
+        .lever-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Calibration Range Display Bar */
+        .calib-summary-box {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            background: #090c14;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .calib-stat-label {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        .calib-stat-val {
+            color: var(--cyan);
+            font-weight: 700;
+            font-size: 0.95rem;
+            font-family: monospace;
+        }
+
+        /* Underglow Bar */
+        .underglow-preview {
+            display: flex;
+            width: 100%;
+            max-width: 840px;
+            justify-content: space-between;
+            padding: 0 0.5rem;
+        }
+
+        .underglow-cluster {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid transparent;
+        }
+
+        .underglow-cluster:hover {
+            border-color: var(--cyan);
+        }
+
+        .underglow-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        /* Settings Inspector Panel */
+        .inspector-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .form-control {
+            background: #0e121c;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--cyan);
+        }
+
+        .color-picker-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .color-picker-input {
+            width: 44px;
+            height: 38px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .palette-swatches {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 0.25rem;
+        }
+
+        .swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.15s ease;
+        }
+
+        .swatch:hover {
+            transform: scale(1.25);
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-box {
+            background: #151a26;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            padding: 1.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .key-capture-box {
+            background: #090c14;
+            border: 2px dashed var(--cyan);
+            border-radius: 12px;
+            padding: 2rem 1rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .key-capture-box h3 {
+            color: var(--cyan);
+            font-size: 1.25rem;
+        }
+
+        .footer-tools {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <div class="logo-icon">G</div>
+            <div>
+                <h1>GEKIMAX CONFIGURATOR</h1>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <div class="status-badge" id="statusBadge">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <button class="btn btn-primary" id="btnConnect">
+                <span>🔌 Connect Controller</span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="instruction-banner">
+            <div>
+                <p>💡 <strong>How to enter Config Mode:</strong> Hold <strong>GP1 (Side Left)</strong> while plugging USB into PC, then click <strong>"Connect Controller"</strong>.</p>
+            </div>
+            <div>
+                <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                    <input type="checkbox" id="liveMonitorToggle" disabled>
+                    <span>🔴 Live Input Monitor</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="grid-layout">
+            <!-- Left Column: Graphic Visualizer -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>🎮 Controller Layout & Keymaps</span>
+                    </div>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);" id="visualizerSubtext">Click any button to configure</span>
+                </div>
+
+                <div class="controller-visualizer">
+                    <!-- Underglow Top Display -->
+                    <div class="underglow-preview">
+                        <div class="underglow-cluster" id="ugClusterLeft" title="Click to edit Left Underglow Color">
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Left Glow</span>
+                            <div class="underglow-dot" id="ugDotLeft" style="background: #00c8ff; box-shadow: 0 0 10px #00c8ff;"></div>
+                        </div>
+                        <div class="underglow-cluster" id="ugClusterRight" title="Click to edit Right Underglow Color">
+                            <div class="underglow-dot" id="ugDotRight" style="background: #ff00c8; box-shadow: 0 0 10px #ff00c8;"></div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Right Glow</span>
+                        </div>
+                    </div>
+
+                    <!-- Main Buttons Layout (Side Left and Right on outer flanks) -->
+                    <div class="controller-body">
+                        <!-- Far Left Outer Flank: Side Left (GP1) -->
+                        <div style="display: flex; flex-direction: column; justify-content: flex-start; padding-top: 0.25rem;">
+                            <div class="hw-btn hw-btn-side" data-idx="1" id="btn_1" title="Side Left (GP1)">
+                                <span class="hw-btn-name">Side L</span>
+                                <span class="hw-btn-key" id="key_1">LShift</span>
+                                <div class="hw-btn-rgb-dot" id="dot_1"></div>
+                            </div>
+                        </div>
+
+                        <!-- Left Main Panel -->
+                        <div class="controller-side">
+                            <!-- Left Menu Row -->
+                            <div class="btn-row">
+                                <div class="hw-btn hw-btn-menu" data-idx="0" id="btn_0">
+                                    <span class="hw-btn-name">Left Menu (GP0)</span>
+                                    <span class="hw-btn-key" id="key_0">Esc</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_0"></div>
+                                </div>
+                            </div>
+
+                            <!-- Left RGB 3 Buttons (A, B, C) -->
+                            <div class="btn-row">
+                                <div class="hw-btn hw-btn-rgb" data-idx="2" id="btn_2">
+                                    <span class="hw-btn-name">L-Red (GP2)</span>
+                                    <span class="hw-btn-key" id="key_2">A</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_2"></div>
+                                </div>
+                                <div class="hw-btn hw-btn-rgb" data-idx="3" id="btn_3">
+                                    <span class="hw-btn-name">L-Grn (GP3)</span>
+                                    <span class="hw-btn-key" id="key_3">S</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_3"></div>
+                                </div>
+                                <div class="hw-btn hw-btn-rgb" data-idx="4" id="btn_4">
+                                    <span class="hw-btn-name">L-Blu (GP4)</span>
+                                    <span class="hw-btn-key" id="key_4">D</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_4"></div>
+                                </div>
+                            </div>
+
+                            <!-- Left Bottom Row (GP5..GP8) -->
+                            <div class="btn-row">
+                                <div class="hw-btn" data-idx="5" id="btn_5">
+                                    <span class="hw-btn-name">GP5</span>
+                                    <span class="hw-btn-key" id="key_5">Z</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_5"></div>
+                                </div>
+                                <div class="hw-btn" data-idx="6" id="btn_6">
+                                    <span class="hw-btn-name">GP6</span>
+                                    <span class="hw-btn-key" id="key_6">X</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_6"></div>
+                                </div>
+                                <div class="hw-btn" data-idx="7" id="btn_7">
+                                    <span class="hw-btn-name">GP7</span>
+                                    <span class="hw-btn-key" id="key_7">V</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_7"></div>
+                                </div>
+                                <div class="hw-btn" data-idx="8" id="btn_8">
+                                    <span class="hw-btn-name">GP8</span>
+                                    <span class="hw-btn-key" id="key_8">B</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_8"></div>
+                                </div>
+                            </div>
+
+                            <!-- Left Space / C (GP9) -->
+                            <div class="btn-row">
+                                <div class="hw-btn hw-btn-space" data-idx="9" id="btn_9">
+                                    <span class="hw-btn-name">Left Space (GP9)</span>
+                                    <span class="hw-btn-key" id="key_9">C</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_9"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Center Divider / Mid Space (GP20) -->
+                        <div style="display: flex; flex-direction: column; justify-content: flex-end; width: 48px; padding-bottom: 0.5rem;">
+                            <div class="hw-btn" style="height: 52px; width: 48px;" data-idx="20" id="btn_20">
+                                <span class="hw-btn-name">Fn/Mid</span>
+                                <span class="hw-btn-key" id="key_20">Space</span>
+                                <div class="hw-btn-rgb-dot" id="dot_20"></div>
+                            </div>
+                        </div>
+
+                        <!-- Right Main Panel -->
+                        <div class="controller-side">
+                            <!-- Right Menu Row -->
+                            <div class="btn-row">
+                                <div class="hw-btn hw-btn-menu" data-idx="10" id="btn_10">
+                                    <span class="hw-btn-name">Right Menu (GP10)</span>
+                                    <span class="hw-btn-key" id="key_10">Enter</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_10"></div>
+                                </div>
+                            </div>
+
+                            <!-- Right RGB 3 Buttons (A, B, C) -->
+                            <div class="btn-row">
+                                <div class="hw-btn hw-btn-rgb" data-idx="12" id="btn_12">
+                                    <span class="hw-btn-name">R-Red (GP12)</span>
+                                    <span class="hw-btn-key" id="key_12">L</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_12"></div>
+                                </div>
+                                <div class="hw-btn hw-btn-rgb" data-idx="13" id="btn_13">
+                                    <span class="hw-btn-name">R-Grn (GP13)</span>
+                                    <span class="hw-btn-key" id="key_13">;</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_13"></div>
+                                </div>
+                                <div class="hw-btn hw-btn-rgb" data-idx="14" id="btn_14">
+                                    <span class="hw-btn-name">R-Blu (GP14)</span>
+                                    <span class="hw-btn-key" id="key_14">'</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_14"></div>
+                                </div>
+                            </div>
+
+                            <!-- Right Bottom Row (GP15..GP18) -->
+                            <div class="btn-row">
+                                <div class="hw-btn" data-idx="15" id="btn_15">
+                                    <span class="hw-btn-name">GP15</span>
+                                    <span class="hw-btn-key" id="key_15">N</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_15"></div>
+                                </div>
+                                <div class="hw-btn" data-idx="16" id="btn_16">
+                                    <span class="hw-btn-name">GP16</span>
+                                    <span class="hw-btn-key" id="key_16">,</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_16"></div>
+                                </div>
+                                <div class="hw-btn" data-idx="17" id="btn_17">
+                                    <span class="hw-btn-name">GP17</span>
+                                    <span class="hw-btn-key" id="key_17">.</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_17"></div>
+                                </div>
+                                <div class="hw-btn" data-idx="18" id="btn_18">
+                                    <span class="hw-btn-name">GP18</span>
+                                    <span class="hw-btn-key" id="key_18">/</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_18"></div>
+                                </div>
+                            </div>
+
+                            <!-- Right Space / M (GP19) -->
+                            <div class="btn-row">
+                                <div class="hw-btn hw-btn-space" data-idx="19" id="btn_19">
+                                    <span class="hw-btn-name">Right Space (GP19)</span>
+                                    <span class="hw-btn-key" id="key_19">M</span>
+                                    <div class="hw-btn-rgb-dot" id="dot_19"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Far Right Outer Flank: Side Right (GP11) -->
+                        <div style="display: flex; flex-direction: column; justify-content: flex-start; padding-top: 0.25rem;">
+                            <div class="hw-btn hw-btn-side" data-idx="11" id="btn_11" title="Side Right (GP11)">
+                                <span class="hw-btn-name">Side R</span>
+                                <span class="hw-btn-key" id="key_11">RShift</span>
+                                <div class="hw-btn-rgb-dot" id="dot_11"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analog Lever Visualizer -->
+                    <div class="lever-container">
+                        <div class="lever-labels">
+                            <span id="lblMinLimit">Min: 50</span>
+                            <span id="leverValLabel">Lever Position: Center (2048)</span>
+                            <span id="lblMaxLimit">Max: 4045</span>
+                        </div>
+                        <div class="lever-track">
+                            <div class="lever-center-line"></div>
+                            <div class="lever-handle" id="leverHandle"></div>
+                        </div>
+                    </div>
+
+                    <!-- Calibration Limits Display -->
+                    <div class="calib-summary-box" style="width: 100%; max-width: 840px;">
+                        <div>
+                            <div class="calib-stat-label">CALIB MIN</div>
+                            <div class="calib-stat-val" id="dispCalibMin">50</div>
+                        </div>
+                        <div>
+                            <div class="calib-stat-label">CALIB CENTER</div>
+                            <div class="calib-stat-val" id="dispCalibCenter">2048</div>
+                        </div>
+                        <div>
+                            <div class="calib-stat-label">CALIB MAX</div>
+                            <div class="calib-stat-val" id="dispCalibMax">4045</div>
+                        </div>
+                        <div>
+                            <div class="calib-stat-label">DEADZONE</div>
+                            <div class="calib-stat-val" id="dispDeadzone">8</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Action Buttons -->
+                <div class="footer-tools">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-save" id="btnSaveFlash" disabled>
+                            <span>💾 Save to Controller Flash</span>
+                        </button>
+                        <button class="btn" id="btnExportJson">
+                            <span>📤 Export JSON</span>
+                        </button>
+                        <button class="btn" id="btnImportJson">
+                            <span>📥 Import JSON</span>
+                            <input type="file" id="jsonFileInput" accept=".json" style="display: none;">
+                        </button>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-danger" id="btnResetDefaults" disabled>
+                            <span>Reset Defaults</span>
+                        </button>
+                        <button class="btn" id="btnReboot" disabled>
+                            <span>Reboot Controller</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Settings & Inspector Panel with Tabs -->
+            <div class="card">
+                <!-- Mode Tabs Header -->
+                <div class="tabs-header">
+                    <button class="tab-btn active" id="tabBtnKb">⌨️ Keyboard Mode</button>
+                    <button class="tab-btn" id="tabBtnGp">🎮 Gamepad Mode</button>
+                </div>
+
+                <!-- TAB 1: KEYBOARD MODE CONTROLS -->
+                <div id="tabContentKb" class="inspector-section">
+                    <div class="card-header" style="margin-top: 0.25rem;">
+                        <div class="card-title">
+                            <span>⌨️ Keybind & LED Inspector</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Selected Button</label>
+                        <input type="text" class="form-control" id="inspBtnNameKb" value="Left Red (GP2)" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Keyboard Keybind</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" class="form-control" id="inspKeyNameKb" value="A" readonly>
+                            <button class="btn btn-primary" id="btnChangeKey">Change Key</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Reactive / Trigger LED Color</label>
+                        <div class="color-picker-row">
+                            <input type="color" class="color-picker-input" id="inspColorPickerKb" value="#ff0000">
+                            <span id="inspColorHexKb" style="font-family: monospace; font-size: 0.85rem;">#FF0000</span>
+                        </div>
+                        <div class="palette-swatches">
+                            <div class="swatch" style="background: #ff0000;" data-color="#ff0000" title="Red"></div>
+                            <div class="swatch" style="background: #00ff00;" data-color="#00ff00" title="Green"></div>
+                            <div class="swatch" style="background: #0064ff;" data-color="#0064ff" title="Blue"></div>
+                            <div class="swatch" style="background: #00f0ff;" data-color="#00f0ff" title="Cyan"></div>
+                            <div class="swatch" style="background: #ff00b4;" data-color="#ff00b4" title="Magenta"></div>
+                            <div class="swatch" style="background: #ffe600;" data-color="#ffe600" title="Yellow"></div>
+                            <div class="swatch" style="background: #ff3c00;" data-color="#ff3c00" title="Orange"></div>
+                            <div class="swatch" style="background: #a020f0;" data-color="#a020f0" title="Purple"></div>
+                            <div class="swatch" style="background: #ffd700;" data-color="#ffd700" title="Gold"></div>
+                            <div class="swatch" style="background: #ffffff;" data-color="#ffffff" title="White"></div>
+                        </div>
+                    </div>
+
+                    <div class="card-header" style="margin-top: 0.5rem;">
+                        <div class="card-title">
+                            <span>💡 Keyboard Lighting Effect</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Keyboard LED Mode</label>
+                        <select class="form-control" id="selKbLedMode">
+                            <option value="0">Reactive (Lights on Press, Fades Out)</option>
+                            <option value="1">Breathing (Smooth Pulsing Wave)</option>
+                            <option value="2">Inverted Reactive (Solid ON, Turns Off on Press)</option>
+                            <option value="3">Rainbow Wave (Flowing RGB Spectrum)</option>
+                            <option value="4">Solid (Always Solid Assigned Colors)</option>
+                            <option value="5">Off (Blackout / Stealth Mode)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- TAB 2: GAMEPAD MODE CONTROLS -->
+                <div id="tabContentGp" class="inspector-section" style="display: none;">
+                    <div class="card-header" style="margin-top: 0.25rem;">
+                        <div class="card-title">
+                            <span>🎮 Gamepad Button & LED Inspector</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Selected Button</label>
+                        <input type="text" class="form-control" id="inspBtnNameGp" value="Left Red (GP2)" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Gamepad Mapping Reference</label>
+                        <input type="text" class="form-control" id="inspGamepadBtnName" value="D-Pad Left" readonly style="color: var(--cyan); font-weight: 700;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Gamepad LED Color</label>
+                        <div class="color-picker-row">
+                            <input type="color" class="color-picker-input" id="inspColorPickerGp" value="#ff0000">
+                            <span id="inspColorHexGp" style="font-family: monospace; font-size: 0.85rem;">#FF0000</span>
+                        </div>
+                        <div class="palette-swatches">
+                            <div class="swatch" style="background: #ff0000;" data-color="#ff0000" title="Red"></div>
+                            <div class="swatch" style="background: #00ff00;" data-color="#00ff00" title="Green"></div>
+                            <div class="swatch" style="background: #0064ff;" data-color="#0064ff" title="Blue"></div>
+                            <div class="swatch" style="background: #00f0ff;" data-color="#00f0ff" title="Cyan"></div>
+                            <div class="swatch" style="background: #ff00b4;" data-color="#ff00b4" title="Magenta"></div>
+                            <div class="swatch" style="background: #ffe600;" data-color="#ffe600" title="Yellow"></div>
+                            <div class="swatch" style="background: #ff3c00;" data-color="#ff3c00" title="Orange"></div>
+                            <div class="swatch" style="background: #a020f0;" data-color="#a020f0" title="Purple"></div>
+                            <div class="swatch" style="background: #ffd700;" data-color="#ffd700" title="Gold"></div>
+                            <div class="swatch" style="background: #ffffff;" data-color="#ffffff" title="White"></div>
+                        </div>
+                    </div>
+
+                    <div class="card-header" style="margin-top: 0.5rem;">
+                        <div class="card-title">
+                            <span>💡 Gamepad Lighting Effect</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Gamepad LED Mode</label>
+                        <select class="form-control" id="selGpLedMode">
+                            <option value="0">Reactive (Lights on Press, Fades Out)</option>
+                            <option value="1">Breathing (Smooth Pulsing Wave)</option>
+                            <option value="2">Inverted Reactive (Solid ON, Turns Off on Press)</option>
+                            <option value="3">Rainbow Wave (Flowing RGB Spectrum)</option>
+                            <option value="4">Solid (Always Solid Assigned Colors)</option>
+                            <option value="5">Off (Blackout / Stealth Mode)</option>
+                        </select>
+                    </div>
+
+                    <div class="card-header" style="margin-top: 0.5rem;">
+                        <div class="card-title">
+                            <span>🕹️ Lever Tuning (Gamepad)</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="chkInvertX" checked>
+                            <span>Invert X-Axis (Left Stick X)</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between;">
+                            <label>Gamepad Smoothing (EMA)</label>
+                            <span id="lblSmoothingVal" style="font-size: 0.8rem; color: var(--cyan);">35%</span>
+                        </div>
+                        <input type="range" id="sliderSmoothing" min="0" max="100" value="35" style="width: 100%;">
+                    </div>
+                </div>
+
+                <!-- GLOBAL SETTINGS (ALWAYS VISIBLE AT BOTTOM) -->
+                <div class="card-header" style="margin-top: 0.5rem;">
+                    <div class="card-title">
+                        <span>⚙️ General Settings</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Default Startup Mode</label>
+                    <select class="form-control" id="selDefaultMode">
+                        <option value="0">Sega ONGEKI IO4 Emulation</option>
+                        <option value="1">Keyboard NKRO Mode</option>
+                        <option value="2">Xbox 360 Gamepad Mode</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Key Capture Modal -->
+    <div class="modal-overlay" id="keyModal">
+        <div class="modal-box">
+            <div class="key-capture-box">
+                <h3>Press Any Key On Your Keyboard</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">The key you press will be automatically bound to the selected button.</p>
+                <div style="font-size: 2rem; font-weight: 800; color: #fff; margin-top: 0.5rem;" id="modalDetectedKey">...</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                <select class="form-control" id="modalPresetSelect" style="flex: 1;">
+                    <option value="">-- Or Select Preset / Modifier --</option>
+                    <option value="0" style="color: #ff6b6b; font-weight: 700;">❌ None / Disabled (Unbind)</option>
+                    <option value="225">Left Shift</option>
+                    <option value="229">Right Shift</option>
+                    <option value="224">Left Ctrl</option>
+                    <option value="228">Right Ctrl</option>
+                    <option value="226">Left Alt</option>
+                    <option value="230">Right Alt</option>
+                    <option value="227">Left Windows / GUI</option>
+                    <option value="231">Right Windows / GUI</option>
+                    <option value="41">Escape</option>
+                    <option value="40">Enter</option>
+                    <option value="44">Spacebar</option>
+                    <option value="42">Backspace</option>
+                    <option value="43">Tab</option>
+                    <option value="79">Right Arrow</option>
+                    <option value="80">Left Arrow</option>
+                    <option value="81">Down Arrow</option>
+                    <option value="82">Up Arrow</option>
+                </select>
+                <button class="btn btn-danger" id="btnUnbindKey" title="Unbind Key (None)">Unbind (None)</button>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                <button class="btn" id="btnCancelModal">Cancel</button>
+                <button class="btn btn-primary" id="btnConfirmModal">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Standard USB HID Keycode Table Mapping
+        const HID_KEY_NAMES = {
+            0: 'None',
+            4: 'A', 5: 'B', 6: 'C', 7: 'D', 8: 'E', 9: 'F', 10: 'G', 11: 'H', 12: 'I', 13: 'J',
+            14: 'K', 15: 'L', 16: 'M', 17: 'N', 18: 'O', 19: 'P', 20: 'Q', 21: 'R', 22: 'S', 23: 'T',
+            24: 'U', 25: 'V', 26: 'W', 27: 'X', 28: 'Y', 29: 'Z',
+            30: '1', 31: '2', 32: '3', 33: '4', 34: '5', 35: '6', 36: '7', 37: '8', 38: '9', 39: '0',
+            40: 'Enter', 41: 'Esc', 42: 'Backspace', 43: 'Tab', 44: 'Space',
+            45: '-', 46: '=', 47: '[', 48: ']', 49: '\\', 51: ';', 52: "'", 53: '`',
+            54: ',', 55: '.', 56: '/', 57: 'CapsLock',
+            58: 'F1', 59: 'F2', 60: 'F3', 61: 'F4', 62: 'F5', 63: 'F6', 64: 'F7', 65: 'F8', 66: 'F9', 67: 'F10', 68: 'F11', 69: 'F12',
+            79: 'Right', 80: 'Left', 81: 'Down', 82: 'Up',
+            224: 'LCtrl', 225: 'LShift', 226: 'LAlt', 227: 'LGUI', 228: 'RCtrl', 229: 'RShift', 230: 'RAlt', 231: 'RGUI'
+        };
+
+        const DOM_TO_HID = {
+            'KeyA': 4, 'KeyB': 5, 'KeyC': 6, 'KeyD': 7, 'KeyE': 8, 'KeyF': 9, 'KeyG': 10, 'KeyH': 11, 'KeyI': 12, 'KeyJ': 13,
+            'KeyK': 14, 'KeyL': 15, 'KeyM': 16, 'KeyN': 17, 'KeyO': 18, 'KeyP': 19, 'KeyQ': 20, 'KeyR': 21, 'KeyS': 22, 'KeyT': 23,
+            'KeyU': 24, 'KeyV': 25, 'KeyW': 26, 'KeyX': 27, 'KeyY': 28, 'KeyZ': 29,
+            'Digit1': 30, 'Digit2': 31, 'Digit3': 32, 'Digit4': 33, 'Digit5': 34, 'Digit6': 35, 'Digit7': 36, 'Digit8': 37, 'Digit9': 38, 'Digit0': 39,
+            'Enter': 40, 'Escape': 41, 'Backspace': 42, 'Tab': 43, 'Space': 44,
+            'Minus': 45, 'Equal': 46, 'BracketLeft': 47, 'BracketRight': 48, 'Backslash': 49, 'Semicolon': 51, 'Quote': 52, 'Backquote': 53,
+            'Comma': 54, 'Period': 55, 'Slash': 56,
+            'ShiftLeft': 225, 'ShiftRight': 229, 'ControlLeft': 224, 'ControlRight': 228, 'AltLeft': 226, 'AltRight': 230,
+            'MetaLeft': 227, 'MetaRight': 231,
+            'ArrowRight': 79, 'ArrowLeft': 80, 'ArrowDown': 81, 'ArrowUp': 82
+        };
+
+        const BUTTON_LABELS = [
+            "Left Menu (GP0)", "Side Left (GP1)", "Left Red (GP2)", "Left Green (GP3)", "Left Blue (GP4)",
+            "Left Bottom 1 (GP5)", "Left Bottom 2 (GP6)", "Left Bottom 3 (GP7)", "Left Bottom 4 (GP8)", "Left Space / C (GP9)",
+            "Right Menu (GP10)", "Side Right (GP11)", "Right Red (GP12)", "Right Green (GP13)", "Right Blue (GP14)",
+            "Right Bottom 1 (GP15)", "Right Bottom 2 (GP16)", "Right Bottom 3 (GP17)", "Right Bottom 4 (GP18)", "Right Space / M (GP19)",
+            "Fn / Mid Space (GP20)"
+        ];
+
+        const GAMEPAD_BUTTON_NAMES = [
+            "Back / Select", "Left Bumper (LB)", "D-Pad Left", "D-Pad Up", "D-Pad Right",
+            "D-Pad Down", "Left Thumb (LS)", "Right Thumb (RS)", "B Button", "Left Trigger (LT)",
+            "Start", "Right Bumper (RB)", "X Button", "Y Button", "A Button",
+            "B Button", "Right Stick Up", "Right Stick Left", "Right Stick Right", "Right Trigger (RT)",
+            "Xbox Guide"
+        ];
+
+        // Device Configuration State
+        let currentConfig = {
+            version: 5,
+            active_mode: 0,
+            invert_x: 1,
+            smoothing: 35,
+            kb_led_mode: 0,
+            gamepad_led_mode: 0,
+            calib_min: 50,
+            calib_max: 4045,
+            calib_center: 2048,
+            deadzone: 8,
+            keymap: [41, 225, 4, 22, 7, 29, 27, 25, 5, 6, 40, 229, 15, 51, 52, 17, 54, 55, 56, 16, 44],
+            led_colors: [
+                [255, 0, 0], [255, 0, 180], [255, 0, 0], [0, 255, 0], [0, 100, 255],
+                [160, 30, 255], [160, 30, 255], [160, 30, 255], [160, 30, 255], [255, 60, 0],
+                [255, 230, 0], [255, 0, 180], [255, 0, 0], [0, 255, 0], [0, 100, 255],
+                [160, 30, 255], [160, 30, 255], [160, 30, 255], [160, 30, 255], [255, 60, 0],
+                [255, 220, 50]
+            ],
+            underglow_left: [0, 200, 255],
+            underglow_right: [255, 0, 200]
+        };
+
+        let activeTab = 'keyboard'; // 'keyboard' or 'gamepad'
+        let selectedBtnIndex = 2; // Default to Left Red
+        let isUnderglowSelected = false;
+        let selectedUnderglowSide = 'left';
+
+        // Serial Port Management
+        let port = null;
+        let reader = null;
+        let writer = null;
+        let isConnected = false;
+        let monitorInterval = null;
+        let rxBuffer = '';
+
+        // UI Element References
+        const btnConnect = document.getElementById('btnConnect');
+        const statusBadge = document.getElementById('statusBadge');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const btnSaveFlash = document.getElementById('btnSaveFlash');
+        const btnResetDefaults = document.getElementById('btnResetDefaults');
+        const btnReboot = document.getElementById('btnReboot');
+        const liveMonitorToggle = document.getElementById('liveMonitorToggle');
+
+        const tabBtnKb = document.getElementById('tabBtnKb');
+        const tabBtnGp = document.getElementById('tabBtnGp');
+        const tabContentKb = document.getElementById('tabContentKb');
+        const tabContentGp = document.getElementById('tabContentGp');
+
+        const inspBtnNameKb = document.getElementById('inspBtnNameKb');
+        const inspKeyNameKb = document.getElementById('inspKeyNameKb');
+        const btnChangeKey = document.getElementById('btnChangeKey');
+        const inspColorPickerKb = document.getElementById('inspColorPickerKb');
+        const inspColorHexKb = document.getElementById('inspColorHexKb');
+        const selKbLedMode = document.getElementById('selKbLedMode');
+
+        const inspBtnNameGp = document.getElementById('inspBtnNameGp');
+        const inspGamepadBtnName = document.getElementById('inspGamepadBtnName');
+        const inspColorPickerGp = document.getElementById('inspColorPickerGp');
+        const inspColorHexGp = document.getElementById('inspColorHexGp');
+        const selGpLedMode = document.getElementById('selGpLedMode');
+        const chkInvertX = document.getElementById('chkInvertX');
+        const sliderSmoothing = document.getElementById('sliderSmoothing');
+        const lblSmoothingVal = document.getElementById('lblSmoothingVal');
+
+        const selDefaultMode = document.getElementById('selDefaultMode');
+        const dispCalibMin = document.getElementById('dispCalibMin');
+        const dispCalibCenter = document.getElementById('dispCalibCenter');
+        const dispCalibMax = document.getElementById('dispCalibMax');
+        const dispDeadzone = document.getElementById('dispDeadzone');
+        const lblMinLimit = document.getElementById('lblMinLimit');
+        const lblMaxLimit = document.getElementById('lblMaxLimit');
+
+        const keyModal = document.getElementById('keyModal');
+        const modalDetectedKey = document.getElementById('modalDetectedKey');
+        const modalPresetSelect = document.getElementById('modalPresetSelect');
+        const btnUnbindKey = document.getElementById('btnUnbindKey');
+        const btnCancelModal = document.getElementById('btnCancelModal');
+        const btnConfirmModal = document.getElementById('btnConfirmModal');
+        let tempCapturedKeycode = null;
+
+        // Helpers for RGB & Hex Conversion
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        function hexToRgb(hex) {
+            let res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return res ? [parseInt(res[1], 16), parseInt(res[2], 16), parseInt(res[3], 16)] : [255, 255, 255];
+        }
+
+        // Tab Switching
+        tabBtnKb.addEventListener('click', () => {
+            activeTab = 'keyboard';
+            tabBtnKb.classList.add('active');
+            tabBtnGp.classList.remove('active');
+            tabContentKb.style.display = 'flex';
+            tabContentGp.style.display = 'none';
+            renderUI();
+        });
+
+        tabBtnGp.addEventListener('click', () => {
+            activeTab = 'gamepad';
+            tabBtnGp.classList.add('active');
+            tabBtnKb.classList.remove('active');
+            tabContentGp.style.display = 'flex';
+            tabContentKb.style.display = 'none';
+            renderUI();
+        });
+
+        // Render UI with Current Configuration
+        function renderUI() {
+            // Update button labels & RGB dots
+            for (let i = 0; i < 21; i++) {
+                const keyEl = document.getElementById(`key_${i}`);
+                const dotEl = document.getElementById(`dot_${i}`);
+                const btnEl = document.getElementById(`btn_${i}`);
+
+                if (activeTab === 'keyboard') {
+                    const kc = currentConfig.keymap[i];
+                    if (keyEl) {
+                        if (kc === 0) {
+                            keyEl.textContent = 'None';
+                            keyEl.classList.add('is-none');
+                        } else {
+                            keyEl.textContent = HID_KEY_NAMES[kc] || `0x${kc.toString(16)}`;
+                            keyEl.classList.remove('is-none');
+                        }
+                    }
+                } else {
+                    if (keyEl) {
+                        keyEl.textContent = GAMEPAD_BUTTON_NAMES[i] || `Btn ${i}`;
+                        keyEl.classList.remove('is-none');
+                    }
+                }
+
+                const col = currentConfig.led_colors[i];
+                if (dotEl && col) {
+                    const hex = rgbToHex(col[0], col[1], col[2]);
+                    dotEl.style.backgroundColor = hex;
+                    dotEl.style.boxShadow = `0 0 6px ${hex}`;
+                }
+
+                if (btnEl) {
+                    if (!isUnderglowSelected && selectedBtnIndex === i) {
+                        btnEl.classList.add('active-edit');
+                    } else {
+                        btnEl.classList.remove('active-edit');
+                    }
+                }
+            }
+
+            // Underglow Dots
+            const ugL = currentConfig.underglow_left;
+            const ugR = currentConfig.underglow_right;
+            const hexL = rgbToHex(ugL[0], ugL[1], ugL[2]);
+            const hexR = rgbToHex(ugR[0], ugR[1], ugR[2]);
+
+            document.getElementById('ugDotLeft').style.backgroundColor = hexL;
+            document.getElementById('ugDotLeft').style.boxShadow = `0 0 10px ${hexL}`;
+            document.getElementById('ugDotRight').style.backgroundColor = hexR;
+            document.getElementById('ugDotRight').style.boxShadow = `0 0 10px ${hexR}`;
+
+            // Calibration Stats Display
+            dispCalibMin.textContent = currentConfig.calib_min || 50;
+            dispCalibCenter.textContent = currentConfig.calib_center || 2048;
+            dispCalibMax.textContent = currentConfig.calib_max || 4045;
+            dispDeadzone.textContent = currentConfig.deadzone || 8;
+            lblMinLimit.textContent = `Min: ${currentConfig.calib_min || 50}`;
+            lblMaxLimit.textContent = `Max: ${currentConfig.calib_max || 4045}`;
+
+            // Settings Fields
+            chkInvertX.checked = !!currentConfig.invert_x;
+            sliderSmoothing.value = currentConfig.smoothing !== undefined ? currentConfig.smoothing : 35;
+            lblSmoothingVal.textContent = `${sliderSmoothing.value}%`;
+            selDefaultMode.value = currentConfig.active_mode !== undefined ? currentConfig.active_mode : 0;
+            selKbLedMode.value = currentConfig.kb_led_mode !== undefined ? currentConfig.kb_led_mode : 0;
+            selGpLedMode.value = currentConfig.gamepad_led_mode !== undefined ? currentConfig.gamepad_led_mode : 0;
+
+            // Inspector Panel for Active Tab
+            if (isUnderglowSelected) {
+                const title = selectedUnderglowSide === 'left' ? 'Left Underglow Cluster' : 'Right Underglow Cluster';
+                inspBtnNameKb.value = title;
+                inspBtnNameGp.value = title;
+                inspKeyNameKb.value = 'N/A (Lighting Only)';
+                btnChangeKey.disabled = true;
+                inspGamepadBtnName.value = 'Underglow Cluster';
+
+                const cur = selectedUnderglowSide === 'left' ? ugL : ugR;
+                const hex = rgbToHex(cur[0], cur[1], cur[2]);
+                inspColorPickerKb.value = hex;
+                inspColorHexKb.textContent = hex.toUpperCase();
+                inspColorPickerGp.value = hex;
+                inspColorHexGp.textContent = hex.toUpperCase();
+            } else {
+                const btnLabel = BUTTON_LABELS[selectedBtnIndex] || `Button ${selectedBtnIndex}`;
+                inspBtnNameKb.value = btnLabel;
+                inspBtnNameGp.value = btnLabel;
+
+                const kc = currentConfig.keymap[selectedBtnIndex];
+                inspKeyNameKb.value = (kc === 0) ? 'None (Disabled)' : (HID_KEY_NAMES[kc] || `0x${kc.toString(16)}`);
+                btnChangeKey.disabled = false;
+                inspGamepadBtnName.value = GAMEPAD_BUTTON_NAMES[selectedBtnIndex] || `Button ${selectedBtnIndex}`;
+
+                const col = currentConfig.led_colors[selectedBtnIndex];
+                const hex = rgbToHex(col[0], col[1], col[2]);
+                inspColorPickerKb.value = hex;
+                inspColorHexKb.textContent = hex.toUpperCase();
+                inspColorPickerGp.value = hex;
+                inspColorHexGp.textContent = hex.toUpperCase();
+            }
+        }
+
+        // Selection Handlers
+        document.querySelectorAll('.hw-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                isUnderglowSelected = false;
+                selectedBtnIndex = parseInt(btn.dataset.idx);
+                renderUI();
+            });
+        });
+
+        document.getElementById('ugClusterLeft').addEventListener('click', () => {
+            isUnderglowSelected = true;
+            selectedUnderglowSide = 'left';
+            renderUI();
+        });
+
+        document.getElementById('ugClusterRight').addEventListener('click', () => {
+            isUnderglowSelected = true;
+            selectedUnderglowSide = 'right';
+            renderUI();
+        });
+
+        // Color Picker Changes (Keyboard & Gamepad tabs)
+        function handleColorChange(hex) {
+            const rgb = hexToRgb(hex);
+            if (isUnderglowSelected) {
+                if (selectedUnderglowSide === 'left') currentConfig.underglow_left = rgb;
+                else currentConfig.underglow_right = rgb;
+            } else {
+                currentConfig.led_colors[selectedBtnIndex] = rgb;
+            }
+            renderUI();
+        }
+
+        inspColorPickerKb.addEventListener('input', (e) => handleColorChange(e.target.value));
+        inspColorPickerGp.addEventListener('input', (e) => handleColorChange(e.target.value));
+
+        // Preset Swatches
+        document.querySelectorAll('.swatch').forEach(sw => {
+            sw.addEventListener('click', () => {
+                handleColorChange(sw.dataset.color);
+            });
+        });
+
+        // Gamepad & LED Settings Handlers
+        chkInvertX.addEventListener('change', (e) => {
+            currentConfig.invert_x = e.target.checked ? 1 : 0;
+        });
+
+        sliderSmoothing.addEventListener('input', (e) => {
+            currentConfig.smoothing = parseInt(e.target.value);
+            lblSmoothingVal.textContent = `${currentConfig.smoothing}%`;
+        });
+
+        selDefaultMode.addEventListener('change', (e) => {
+            currentConfig.active_mode = parseInt(e.target.value);
+        });
+
+        selKbLedMode.addEventListener('change', (e) => {
+            currentConfig.kb_led_mode = parseInt(e.target.value);
+        });
+
+        selGpLedMode.addEventListener('change', (e) => {
+            currentConfig.gamepad_led_mode = parseInt(e.target.value);
+        });
+
+        // Key Remap Modal
+        btnChangeKey.addEventListener('click', () => {
+            tempCapturedKeycode = currentConfig.keymap[selectedBtnIndex];
+            modalDetectedKey.textContent = (tempCapturedKeycode === 0) ? 'None (Disabled)' : (HID_KEY_NAMES[tempCapturedKeycode] || 'Press a key...');
+            modalPresetSelect.value = (tempCapturedKeycode === 0) ? '0' : '';
+            keyModal.classList.add('active');
+            window.addEventListener('keydown', handlePhysicalKeypress);
+        });
+
+        function handlePhysicalKeypress(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (DOM_TO_HID[e.code] !== undefined) {
+                tempCapturedKeycode = DOM_TO_HID[e.code];
+                modalDetectedKey.textContent = (tempCapturedKeycode === 0) ? 'None (Disabled)' : (HID_KEY_NAMES[tempCapturedKeycode] || e.code);
+            }
+        }
+
+        modalPresetSelect.addEventListener('change', (e) => {
+            if (e.target.value !== "") {
+                tempCapturedKeycode = parseInt(e.target.value);
+                modalDetectedKey.textContent = (tempCapturedKeycode === 0) ? 'None (Disabled)' : (HID_KEY_NAMES[tempCapturedKeycode] || 'Key');
+            }
+        });
+
+        btnUnbindKey.addEventListener('click', () => {
+            tempCapturedKeycode = 0;
+            modalDetectedKey.textContent = 'None (Disabled)';
+            modalPresetSelect.value = '0';
+        });
+
+        btnCancelModal.addEventListener('click', () => {
+            window.removeEventListener('keydown', handlePhysicalKeypress);
+            keyModal.classList.remove('active');
+        });
+
+        btnConfirmModal.addEventListener('click', () => {
+            window.removeEventListener('keydown', handlePhysicalKeypress);
+            if (tempCapturedKeycode !== null) {
+                currentConfig.keymap[selectedBtnIndex] = tempCapturedKeycode;
+            }
+            keyModal.classList.remove('active');
+            renderUI();
+        });
+
+        // WebSerial Communication Engine
+        async function sendLine(cmd) {
+            if (!writer) return;
+            const data = new TextEncoder().encode(cmd + '\r\n');
+            await writer.write(data);
+        }
+
+        async function readSerialLoop() {
+            const textDecoder = new TextDecoder();
+            while (port && port.readable) {
+                try {
+                    reader = port.readable.getReader();
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        if (value) {
+                            rxBuffer += textDecoder.decode(value);
+                            let lines = rxBuffer.split('\n');
+                            rxBuffer = lines.pop(); // Keep partial line
+
+                            for (let line of lines) {
+                                line = line.trim();
+                                if (line.length > 0) handleIncomingLine(line);
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error("Read error:", err);
+                    break;
+                } finally {
+                    if (reader) reader.releaseLock();
+                }
+            }
+        }
+
+        function handleIncomingLine(line) {
+            if (line.startsWith('CONFIG:')) {
+                try {
+                    const jsonStr = line.substring(7);
+                    const cfg = JSON.parse(jsonStr);
+                    currentConfig = cfg;
+                    renderUI();
+                    console.log("Config loaded successfully:", cfg);
+                } catch (e) {
+                    console.error("Failed to parse config JSON:", e);
+                }
+            } else if (line.startsWith('INPUTS:')) {
+                try {
+                    const data = JSON.parse(line.substring(7));
+                    updateLiveMonitor(data);
+                } catch (e) {}
+            } else if (line.startsWith('OK:CONFIG_SAVED')) {
+                alert("✅ Configuration successfully saved to Controller Flash memory!");
+            } else if (line.startsWith('OK:DEFAULTS_RESET')) {
+                alert("✅ Factory defaults restored!");
+                sendLine('GET_CONFIG');
+            }
+        }
+
+        function updateLiveMonitor(data) {
+            // Button Bitmask
+            for (let i = 0; i < 21; i++) {
+                const btnEl = document.getElementById(`btn_${i}`);
+                if (btnEl) {
+                    if ((data.buttons >> i) & 1) {
+                        btnEl.classList.add('pressed');
+                    } else {
+                        btnEl.classList.remove('pressed');
+                    }
+                }
+            }
+
+            // Analog Lever Position (0..1 normalized)
+            const handle = document.getElementById('leverHandle');
+            const label = document.getElementById('leverValLabel');
+            if (handle && label) {
+                const pct = Math.max(0, Math.min(1, data.norm)) * 100;
+                handle.style.left = `calc(${pct}% - 16px)`;
+                label.textContent = `Lever Position: ${data.raw_adc} (${Math.round(pct)}%)`;
+            }
+        }
+
+        btnConnect.addEventListener('click', async () => {
+            if (isConnected) {
+                disconnectDevice();
+                return;
+            }
+
+            if (!("serial" in navigator)) {
+                alert("Web Serial API is not supported in this browser. Please open in Google Chrome or Microsoft Edge.");
+                return;
+            }
+
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+
+                writer = port.writable.getWriter();
+                isConnected = true;
+
+                statusDot.classList.add('connected');
+                statusText.textContent = "Connected (Gekimax)";
+                btnConnect.textContent = "🔌 Disconnect";
+                btnSaveFlash.disabled = false;
+                btnResetDefaults.disabled = false;
+                btnReboot.disabled = false;
+                liveMonitorToggle.disabled = false;
+
+                readSerialLoop();
+
+                // Handshake & Request Config
+                await sendLine('PING');
+                await sendLine('GET_CONFIG');
+            } catch (err) {
+                console.error("Connection failed:", err);
+                disconnectDevice();
+            }
+        });
+
+        function disconnectDevice() {
+            if (monitorInterval) clearInterval(monitorInterval);
+            if (writer) writer.releaseLock();
+            if (reader) reader.cancel();
+            if (port) port.close();
+
+            port = null;
+            writer = null;
+            reader = null;
+            isConnected = false;
+
+            statusDot.classList.remove('connected');
+            statusText.textContent = "Disconnected";
+            btnConnect.textContent = "🔌 Connect Controller";
+            btnSaveFlash.disabled = true;
+            btnResetDefaults.disabled = true;
+            btnReboot.disabled = true;
+            liveMonitorToggle.disabled = true;
+            liveMonitorToggle.checked = false;
+        }
+
+        // Live Monitor Polling
+        liveMonitorToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                monitorInterval = setInterval(() => {
+                    sendLine('GET_INPUTS');
+                }, 33); // ~30 Hz
+            } else {
+                if (monitorInterval) clearInterval(monitorInterval);
+            }
+        });
+
+        // Flash Save / Reset / Reboot Handlers
+        btnSaveFlash.addEventListener('click', () => {
+            const payload = `SET_CONFIG ${JSON.stringify(currentConfig)}`;
+            sendLine(payload);
+        });
+
+        btnResetDefaults.addEventListener('click', () => {
+            if (confirm("Reset all keybinds, colors, and settings to factory defaults?")) {
+                sendLine('RESET_DEFAULTS');
+            }
+        });
+
+        btnReboot.addEventListener('click', () => {
+            sendLine('REBOOT');
+            setTimeout(disconnectDevice, 500);
+        });
+
+        // JSON Export / Import
+        document.getElementById('btnExportJson').addEventListener('click', () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentConfig, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "gekimax_config.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        });
+
+        document.getElementById('btnImportJson').addEventListener('click', () => {
+            document.getElementById('jsonFileInput').click();
+        });
+
+        document.getElementById('jsonFileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const cfg = JSON.parse(event.target.result);
+                    currentConfig = cfg;
+                    renderUI();
+                    alert("Config imported successfully!");
+                } catch (err) {
+                    alert("Invalid JSON configuration file.");
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Initial UI Render
+        renderUI();
+    </script>
+</body>
+</html>
