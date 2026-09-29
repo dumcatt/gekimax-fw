@@ -1,6 +1,6 @@
 # Gekimax IO4 & Multi-Mode Custom Firmware
 
-High-performance custom firmware for the **Gekimax** rhythm game controller built on the **Raspberry Pi Pico (RP2040)**.
+High-performance custom firmware for the [Gekimax](https://github.com/Umi4Life/gekimax) rhythm game controller built on the **Raspberry Pi Pico (RP2040)**.
 
 > [!CAUTION]
 > This project was 100% vibe coded. I don't know how much of it is actually correct, but it works for my use cases.
