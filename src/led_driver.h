@@ -11,7 +11,7 @@ struct RGBColor {
 
     constexpr RGBColor() : r(0), g(0), b(0) {}
     constexpr RGBColor(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b) {}
-    
+
     static constexpr RGBColor Black() { return RGBColor(0, 0, 0); }
     static constexpr RGBColor Red() { return RGBColor(255, 0, 0); }
     static constexpr RGBColor Green() { return RGBColor(0, 255, 0); }
@@ -36,7 +36,7 @@ void led_set_pixel(uint8_t index, RGBColor color);
 void led_fill(RGBColor color);
 void led_show();
 
-// Reactive lighting update (called periodically)
+// Reactive lighting update (called periodically on Core 1)
 void led_update_reactive(uint32_t button_mask);
 
 // Game-controlled output for IO4 Mode
@@ -47,8 +47,11 @@ void led_set_io4_active(bool active);
 void led_calibration_animation(CalibStage stage, bool achieved, float lever_ratio);
 void led_flash_confirm_green();
 
-// Config Mode visual animation
+// Config Mode visual animation & live hardware preview state
 void led_config_mode_animation();
+void led_set_config_connected(bool connected);
+bool led_is_config_connected();
+void led_set_preview_mode_override(int8_t mode_override);
 
 // Mode boot flash
 void led_flash_mode(uint8_t mode);

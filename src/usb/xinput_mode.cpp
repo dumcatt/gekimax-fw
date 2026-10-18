@@ -122,37 +122,50 @@ namespace xinput_mode {
         report.report_id = 0x00;
         report.report_size = sizeof(XInputReport);
 
-        // Buttons 1 (D-Pad, Menu, Sticks)
-        if (is_button_pressed(PIN_LEFT_GREEN)) report.buttons1 |= 0x01; // GP3:  DPAD_UP
-        if (is_button_pressed(PIN_LEFT_1))     report.buttons1 |= 0x02; // GP5:  DPAD_DOWN
-        if (is_button_pressed(PIN_LEFT_RED))   report.buttons1 |= 0x04; // GP2:  DPAD_LEFT
-        if (is_button_pressed(PIN_LEFT_BLUE))  report.buttons1 |= 0x08; // GP4:  DPAD_RIGHT
-        if (is_button_pressed(PIN_RIGHT_MENU)) report.buttons1 |= 0x10; // GP10: START
-        if (is_button_pressed(PIN_LEFT_MENU))  report.buttons1 |= 0x20; // GP0:  BACK
-        if (is_button_pressed(PIN_LEFT_2))     report.buttons1 |= 0x40; // GP6:  LEFT_THUMB (LS)
-        if (is_button_pressed(PIN_LEFT_3))     report.buttons1 |= 0x80; // GP7:  RIGHT_THUMB (RS)
-
-        // Buttons 2 (Bumpers, Guide, Face buttons)
-        if (is_button_pressed(PIN_SIDE_LEFT))  report.buttons2 |= 0x01; // GP1:  LB
-        if (is_button_pressed(PIN_SIDE_RIGHT)) report.buttons2 |= 0x02; // GP11: RB
-        if (is_button_pressed(PIN_MID_SPACE))  report.buttons2 |= 0x04; // GP20: GUIDE / Home
-        if (is_button_pressed(PIN_RIGHT_BLUE)) report.buttons2 |= 0x10; // GP14: A
-        if (is_button_pressed(PIN_RIGHT_1) ||
-            is_button_pressed(PIN_LEFT_4))     report.buttons2 |= 0x20; // GP15/GP8: B
-        if (is_button_pressed(PIN_RIGHT_RED))  report.buttons2 |= 0x40; // GP12: X
-        if (is_button_pressed(PIN_RIGHT_GREEN))report.buttons2 |= 0x80; // GP13: Y
-
-        // Triggers
-        if (is_button_pressed(PIN_LEFT_SPACE))  report.left_trigger = 255;  // GP9:  LT
-        if (is_button_pressed(PIN_RIGHT_SPACE)) report.right_trigger = 255; // GP19: RT
-
-        // Right Stick D-Pad/Axes mapping for rhythm game extra buttons
-        if (is_button_pressed(PIN_RIGHT_2)) report.thumb_ry = 32767;  // GP16: Right Stick Up
-        if (is_button_pressed(PIN_RIGHT_3)) report.thumb_rx = -32768; // GP17: Right Stick Left
-        if (is_button_pressed(PIN_RIGHT_4)) report.thumb_rx = 32767;  // GP18: Right Stick Right
-
-        // Lever Analog mapping
+        // Lever Analog mapping (Left Stick X default)
         report.thumb_lx = analog_lever_get_xinput();
+
+        uint32_t mask = read_all_buttons();
+        uint8_t resolved_codes[NUM_BUTTONS];
+        config_process_buttons_with_fn(mask, true, resolved_codes);
+
+        for (int i = 0; i < NUM_BUTTONS; i++) {
+            uint8_t act = resolved_codes[i];
+            if (act == 0) continue;
+
+            switch (act) {
+                case GP_ACT_DPAD_UP:    report.buttons1 |= 0x01; break;
+                case GP_ACT_DPAD_DOWN:  report.buttons1 |= 0x02; break;
+                case GP_ACT_DPAD_LEFT:  report.buttons1 |= 0x04; break;
+                case GP_ACT_DPAD_RIGHT: report.buttons1 |= 0x08; break;
+                case GP_ACT_START:      report.buttons1 |= 0x10; break;
+                case GP_ACT_BACK:       report.buttons1 |= 0x20; break;
+                case GP_ACT_LS_CLICK:   report.buttons1 |= 0x40; break;
+                case GP_ACT_RS_CLICK:   report.buttons1 |= 0x80; break;
+
+                case GP_ACT_LB:         report.buttons2 |= 0x01; break;
+                case GP_ACT_RB:         report.buttons2 |= 0x02; break;
+                case GP_ACT_GUIDE:      report.buttons2 |= 0x04; break;
+                case GP_ACT_A:          report.buttons2 |= 0x10; break;
+                case GP_ACT_B:          report.buttons2 |= 0x20; break;
+                case GP_ACT_X:          report.buttons2 |= 0x40; break;
+                case GP_ACT_Y:          report.buttons2 |= 0x80; break;
+
+                case GP_ACT_LT:         report.left_trigger = 255; break;
+                case GP_ACT_RT:         report.right_trigger = 255; break;
+
+                case GP_ACT_RS_UP:      report.thumb_ry = 32767; break;
+                case GP_ACT_RS_DOWN:    report.thumb_ry = -32768; break;
+                case GP_ACT_RS_LEFT:    report.thumb_rx = -32768; break;
+                case GP_ACT_RS_RIGHT:   report.thumb_rx = 32767; break;
+
+                case GP_ACT_LS_UP:      report.thumb_ly = 32767; break;
+                case GP_ACT_LS_DOWN:    report.thumb_ly = -32768; break;
+                case GP_ACT_LS_LEFT:    report.thumb_lx = -32768; break;
+                case GP_ACT_LS_RIGHT:   report.thumb_lx = 32767; break;
+                default: break;
+            }
+        }
 
         usbd_edpt_claim(0, g_xinput_ep_in);
         usbd_edpt_xfer(0, g_xinput_ep_in, (uint8_t*)&report, sizeof(report));

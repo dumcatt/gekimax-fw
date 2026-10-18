@@ -13,16 +13,28 @@
 
 static uint8_t g_active_mode = MODE_IO4;
 
+static inline void core1_safe_sleep_ms(uint32_t ms) {
+    for (uint32_t i = 0; i < ms; i++) {
+        config_core1_check_lockout();
+        sleep_ms(1);
+    }
+    config_core1_check_lockout();
+}
+
 // Core 1 handles reactive LED animations and WS2812 rendering
 void core1_entry() {
+    config_notify_core1_started();
+
     while (true) {
-        if (g_active_mode == MODE_CONFIG) {
+        config_core1_check_lockout();
+
+        if (g_active_mode == MODE_CONFIG && !led_is_config_connected()) {
             led_config_mode_animation();
-            sleep_ms(16); // ~60 FPS animation in config mode
+            core1_safe_sleep_ms(16); // ~60 FPS idle config pulse before WebSerial connects
         } else {
             uint32_t button_mask = read_all_buttons();
             led_update_reactive(button_mask);
-            sleep_ms(8); // ~120 FPS LED update rate
+            core1_safe_sleep_ms(8); // ~120 FPS LED update rate
         }
     }
 }

@@ -3,28 +3,46 @@
 #include "led_driver.h"
 #include "analog_lever.h"
 #include "tusb.h"
+#include "pico/stdlib.h"
 #include "hardware/watchdog.h"
 #include "pico/bootrom.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-static char g_rx_buf[2048];
+static char g_rx_buf[2560];
 static size_t g_rx_pos = 0;
 
 static void send_response(const char *str) {
     if (!tud_cdc_connected()) return;
-    tud_cdc_write(str, strlen(str));
+    size_t total = strlen(str);
+    size_t sent = 0;
+    uint32_t start_us = time_us_32();
+
+    while (sent < total && tud_cdc_connected()) {
+        uint32_t avail = tud_cdc_write_available();
+        if (avail > 0) {
+            uint32_t chunk = (uint32_t)(total - sent);
+            if (chunk > avail) chunk = avail;
+            sent += tud_cdc_write(str + sent, chunk);
+            tud_cdc_write_flush();
+        } else {
+            tud_task();
+            tud_cdc_write_flush();
+            if ((time_us_32() - start_us) > 50000u) break; // 50ms safety timeout
+        }
+    }
     tud_cdc_write_flush();
 }
 
 static void send_config_json() {
-    char out[1536];
+    char out[2048];
     const auto& cfg = config_get();
 
     int len = snprintf(out, sizeof(out),
         "CONFIG:{\"version\":%u,\"active_mode\":%u,\"invert_x\":%u,\"smoothing\":%u,"
-        "\"kb_led_mode\":%u,\"gamepad_led_mode\":%u,"
+        "\"kb_led_mode\":%u,\"gamepad_led_mode\":%u,\"brightness\":%u,\"debounce_ms\":%u,"
+        "\"fn_tap_hold_gp20\":%u,"
         "\"calib_min\":%u,\"calib_max\":%u,\"calib_center\":%u,\"deadzone\":%u,",
         (unsigned)cfg.version,
         (unsigned)cfg.active_mode,
@@ -32,16 +50,40 @@ static void send_config_json() {
         (unsigned)cfg.gamepad_smoothing,
         (unsigned)cfg.kb_led_mode,
         (unsigned)cfg.gamepad_led_mode,
+        (unsigned)cfg.led_brightness,
+        (unsigned)cfg.debounce_ms,
+        (unsigned)cfg.fn_tap_hold_gp20,
         (unsigned)cfg.calib_min,
         (unsigned)cfg.calib_max,
         (unsigned)cfg.calib_center,
         (unsigned)cfg.deadzone
     );
 
-    // Keymap
+    // Base Keymap
     len += snprintf(out + len, sizeof(out) - len, "\"keymap\":[");
     for (int i = 0; i < NUM_BUTTONS; i++) {
         len += snprintf(out + len, sizeof(out) - len, "%u%s", cfg.keymap[i], (i == NUM_BUTTONS - 1) ? "" : ",");
+    }
+    len += snprintf(out + len, sizeof(out) - len, "],");
+
+    // FN Layer Keymap
+    len += snprintf(out + len, sizeof(out) - len, "\"fn_keymap\":[");
+    for (int i = 0; i < NUM_BUTTONS; i++) {
+        len += snprintf(out + len, sizeof(out) - len, "%u%s", cfg.fn_keymap[i], (i == NUM_BUTTONS - 1) ? "" : ",");
+    }
+    len += snprintf(out + len, sizeof(out) - len, "],");
+
+    // Base Gamepad Map
+    len += snprintf(out + len, sizeof(out) - len, "\"gamepad_map\":[");
+    for (int i = 0; i < NUM_BUTTONS; i++) {
+        len += snprintf(out + len, sizeof(out) - len, "%u%s", cfg.gamepad_map[i], (i == NUM_BUTTONS - 1) ? "" : ",");
+    }
+    len += snprintf(out + len, sizeof(out) - len, "],");
+
+    // FN Layer Gamepad Map
+    len += snprintf(out + len, sizeof(out) - len, "\"fn_gamepad_map\":[");
+    for (int i = 0; i < NUM_BUTTONS; i++) {
+        len += snprintf(out + len, sizeof(out) - len, "%u%s", cfg.fn_gamepad_map[i], (i == NUM_BUTTONS - 1) ? "" : ",");
     }
     len += snprintf(out + len, sizeof(out) - len, "],");
 
@@ -141,6 +183,15 @@ static void handle_set_config(const char *json) {
             cfg.gamepad_led_mode = (uint8_t)val;
         }
     }
+    if (parse_json_uint(json, "brightness", &val)) {
+        cfg.led_brightness = (uint8_t)(val > 255 ? 255 : val);
+    }
+    if (parse_json_uint(json, "debounce_ms", &val)) {
+        cfg.debounce_ms = (uint8_t)(val > 25 ? 25 : val);
+    }
+    if (parse_json_uint(json, "fn_tap_hold_gp20", &val)) {
+        cfg.fn_tap_hold_gp20 = (uint8_t)(val ? 1 : 0);
+    }
     if (parse_json_uint(json, "invert_x", &val)) {
         cfg.gamepad_invert_x = (uint8_t)(val ? 1 : 0);
     }
@@ -161,6 +212,9 @@ static void handle_set_config(const char *json) {
     }
 
     parse_json_array(json, "keymap", cfg.keymap, NUM_BUTTONS);
+    parse_json_array(json, "fn_keymap", cfg.fn_keymap, NUM_BUTTONS);
+    parse_json_array(json, "gamepad_map", cfg.gamepad_map, NUM_BUTTONS);
+    parse_json_array(json, "fn_gamepad_map", cfg.fn_gamepad_map, NUM_BUTTONS);
     parse_json_colors(json, "led_colors", cfg.led_colors, NUM_BUTTONS);
 
     uint8_t ug_left[3] = {0}, ug_right[3] = {0};
@@ -172,6 +226,7 @@ static void handle_set_config(const char *json) {
     }
 
     config_save();
+    led_set_config_connected(true);
     send_response("OK:CONFIG_SAVED\r\n");
 }
 
@@ -180,8 +235,10 @@ static void handle_line(char *line) {
     while (*line == ' ' || *line == '\t') line++;
 
     if (strncmp(line, "PING", 4) == 0) {
+        led_set_config_connected(true);
         send_response("PONG\r\n");
     } else if (strncmp(line, "GET_CONFIG", 10) == 0) {
+        led_set_config_connected(true);
         send_config_json();
     } else if (strncmp(line, "SET_CONFIG ", 11) == 0) {
         handle_set_config(line + 11);
@@ -195,16 +252,39 @@ static void handle_line(char *line) {
         float lever_norm = analog_lever_get_normalized();
         char resp[128];
         snprintf(resp, sizeof(resp), "INPUTS:{\"buttons\":%lu,\"raw_adc\":%u,\"norm\":%.3f}\r\n",
-            buttons, lever_raw, lever_norm);
+            (unsigned long)buttons, lever_raw, lever_norm);
         send_response(resp);
     } else if (strncmp(line, "PREVIEW_LEDS ", 13) == 0) {
-        // e.g. PREVIEW_LEDS [[r,g,b],...]
-        uint8_t preview_colors[NUM_BUTTONS][3];
-        if (parse_json_colors(line + 13, "colors", preview_colors, NUM_BUTTONS)) {
-            for (int i = 0; i < NUM_BUTTONS; i++) {
-                led_set_pixel(i, RGBColor(preview_colors[i][0], preview_colors[i][1], preview_colors[i][2]));
+        auto& cfg = config_get();
+        const char *json = line + 13;
+        bool ok = false;
+
+        if (parse_json_colors(json, "colors", cfg.led_colors, NUM_BUTTONS)) {
+            ok = true;
+        }
+        uint8_t ug_l[3] = {0}, ug_r[3] = {0};
+        if (parse_json_array(json, "underglow_left", ug_l, 3)) {
+            memcpy(cfg.underglow_left, ug_l, 3);
+            ok = true;
+        }
+        if (parse_json_array(json, "underglow_right", ug_r, 3)) {
+            memcpy(cfg.underglow_right, ug_r, 3);
+            ok = true;
+        }
+        unsigned val = 0;
+        if (parse_json_uint(json, "brightness", &val)) {
+            cfg.led_brightness = (uint8_t)(val > 255 ? 255 : val);
+            ok = true;
+        }
+        if (parse_json_uint(json, "mode", &val)) {
+            if (val <= LED_MODE_OFF) {
+                led_set_preview_mode_override((int8_t)val);
+                ok = true;
             }
-            led_show();
+        }
+
+        if (ok) {
+            led_set_config_connected(true);
             send_response("OK:PREVIEW_SET\r\n");
         } else {
             send_response("ERROR:INVALID_COLORS\r\n");
@@ -225,6 +305,8 @@ static void handle_line(char *line) {
 void serial_config_init() {
     g_rx_pos = 0;
     led_set_io4_active(false);
+    led_set_config_connected(false);
+    led_set_preview_mode_override(-1);
 }
 
 void serial_config_update_task() {

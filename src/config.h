@@ -50,8 +50,51 @@ extern "C" {
 #define LED_MODE_SOLID             4   // Always solid assigned colors
 #define LED_MODE_OFF               5   // LEDs disabled/off
 
-#define CONFIG_MAGIC 0x47454B35 // 'GEK5'
-#define CONFIG_VERSION 5
+// Special FN Layer & Hardware Control Action Codes (valid in both Keyboard & Gamepad maps)
+#define ACT_CODE_FN           240 // Hold for FN Layer (Momentary)
+#define ACT_CODE_LED_NEXT     241 // Cycle to next LED lighting effect
+#define ACT_CODE_LED_PREV     242 // Cycle to previous LED lighting effect
+#define ACT_CODE_BRIGHT_UP    243 // Increase LED brightness (+25)
+#define ACT_CODE_BRIGHT_DOWN  244 // Decrease LED brightness (-25)
+#define ACT_CODE_LED_TOGGLE   245 // Toggle LEDs on/off
+#define ACT_CODE_SAVE_CONFIG  246 // Save current config (LED mode/brightness) to Flash
+#define ACT_CODE_BOOTSEL      247 // Enter RP2040 UF2 Bootloader (BOOTSEL)
+#define ACT_CODE_REBOOT       248 // Reboot controller
+#define ACT_CODE_TRANSPARENT  254 // Pass-through to Base Layer binding
+
+// Remappable XInput Gamepad Button Actions
+enum GamepadAction {
+    GP_ACT_NONE       = 0,
+    GP_ACT_DPAD_UP    = 1,
+    GP_ACT_DPAD_DOWN  = 2,
+    GP_ACT_DPAD_LEFT  = 3,
+    GP_ACT_DPAD_RIGHT = 4,
+    GP_ACT_START      = 5,
+    GP_ACT_BACK       = 6,
+    GP_ACT_LS_CLICK   = 7,
+    GP_ACT_RS_CLICK   = 8,
+    GP_ACT_LB         = 9,
+    GP_ACT_RB         = 10,
+    GP_ACT_GUIDE      = 11,
+    GP_ACT_A          = 12,
+    GP_ACT_B          = 13,
+    GP_ACT_X          = 14,
+    GP_ACT_Y          = 15,
+    GP_ACT_LT         = 16,
+    GP_ACT_RT         = 17,
+    GP_ACT_RS_UP      = 18,
+    GP_ACT_RS_DOWN    = 19,
+    GP_ACT_RS_LEFT    = 20,
+    GP_ACT_RS_RIGHT   = 21,
+    GP_ACT_LS_UP      = 22,
+    GP_ACT_LS_DOWN    = 23,
+    GP_ACT_LS_LEFT    = 24,
+    GP_ACT_LS_RIGHT   = 25,
+    GP_ACT_MAX        = 25
+};
+
+#define CONFIG_MAGIC 0x47454B37 // 'GEK7'
+#define CONFIG_VERSION 7
 
 typedef struct {
     uint32_t magic;
@@ -61,17 +104,23 @@ typedef struct {
     uint8_t  gamepad_smoothing; // 0..100 (e.g. 35 -> alpha 0.35)
     uint8_t  kb_led_mode;       // LED effect in Keyboard Mode (0..5)
     uint8_t  gamepad_led_mode;  // LED effect in Gamepad Mode (0..5)
-    uint8_t  reserved1[2];
-    
-    // Potentiometer Calibration Bounds
+    uint8_t  led_brightness;    // Master LED brightness (0..255, default 220)
+    uint8_t  debounce_ms;       // Eager switch debounce window in ms (0..25, default 3)
+    uint8_t  fn_tap_hold_gp20;  // 1 = GP20 acts as Tap (normal key) / Hold (FN layer), 0 = disabled
+
+    // Potentiometer Calibration Bounds (12-bit ADC: 0..4095)
     uint16_t calib_min;
     uint16_t calib_max;
     uint16_t calib_center;
     uint16_t deadzone;
 
-    // Keymap for 21 buttons (GP0..GP20, 0 = None/Disabled)
+    // Base Layer & FN Layer Keymaps for 21 buttons (GP0..GP20, 0 = None/Disabled)
     uint8_t  keymap[NUM_BUTTONS];
-    uint8_t  reserved2[3];
+    uint8_t  fn_keymap[NUM_BUTTONS];
+
+    // Base Layer & FN Layer XInput Gamepad mappings for 21 buttons (GP_ACT_* or ACT_CODE_*)
+    uint8_t  gamepad_map[NUM_BUTTONS];
+    uint8_t  fn_gamepad_map[NUM_BUTTONS];
 
     // Reactive / Assigned LED Colors for 21 buttons: [r, g, b]
     uint8_t  led_colors[NUM_BUTTONS][3];
@@ -79,6 +128,7 @@ typedef struct {
     // Underglow Colors: [r, g, b]
     uint8_t  underglow_left[3];
     uint8_t  underglow_right[3];
+    uint8_t  reserved3[3];
 
     uint32_t checksum;
 } ConfigData;
@@ -91,6 +141,14 @@ uint8_t check_startup_mode(void);
 void gpio_buttons_init(void);
 bool is_button_pressed(uint8_t pin);
 uint32_t read_all_buttons(void);
+
+// Evaluates Base + FN Layer + GP20 Tap-Hold and triggers rising-edge hardware shortcuts
+void config_process_buttons_with_fn(uint32_t button_mask, bool is_gamepad_mode, uint8_t out_codes[NUM_BUTTONS]);
+bool config_is_fn_layer_active(void);
+
+// Multicore flash lockout helpers
+void config_notify_core1_started(void);
+void config_core1_check_lockout(void);
 
 #ifdef __cplusplus
 }

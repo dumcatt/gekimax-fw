@@ -1,4 +1,4 @@
-// Padded and checksummed version of: C:/Users/papha/OneDrive/Documents/gekimax-io4/build/pico-sdk/src/rp2_common/boot_stage2/bs2_default.bin
+// Padded and checksummed version of: C:/Users/papha/OneDrive/Documents/gekimax-fw/build/pico-sdk/src/rp2_common/boot_stage2/bs2_default.bin
 
 .cpu cortex-m0plus
 .thumb

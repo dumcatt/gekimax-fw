@@ -6,11 +6,13 @@
 
 namespace io4 {
     static OutputReport g_output_data;
+    static bool g_coin_combo_was_pressed = false;
 
     void init() {
         memset(&g_output_data, 0, sizeof(g_output_data));
         g_output_data.coin[0].condition = CoinCondition::Normal;
         g_output_data.coin[1].condition = CoinCondition::Normal;
+        g_coin_combo_was_pressed = false;
         led_set_io4_active(true);
     }
 
@@ -21,6 +23,13 @@ namespace io4 {
         g_output_data.switches[1] = 0;
 
         bool fn_pressed = is_button_pressed(PIN_MID_SPACE); // GP20 (Fn)
+
+        // Coin Chute 1 shortcut: Rising edge of Fn (GP20) + Left Space (GP9)
+        bool coin_combo = fn_pressed && is_button_pressed(PIN_LEFT_SPACE);
+        if (coin_combo && !g_coin_combo_was_pressed) {
+            g_output_data.coin[0].count++;
+        }
+        g_coin_combo_was_pressed = coin_combo;
 
         // Menu & Test/Service logic
         if (is_button_pressed(PIN_LEFT_MENU)) { // GP0

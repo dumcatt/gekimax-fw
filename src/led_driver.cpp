@@ -13,6 +13,8 @@ static uint g_offset = 0;
 static RGBColor g_pixels[NUM_LEDS];
 static RGBColor g_game_leds[6]; // 6 RGB buttons for ONGEKI IO4
 static bool g_io4_mode_active = false;
+static bool g_config_connected = false;
+static int8_t g_preview_mode_override = -1;
 static uint32_t g_last_game_led_update = 0;
 
 void led_driver_init() {
@@ -40,17 +42,36 @@ void led_fill(RGBColor color) {
 }
 
 void led_show() {
+    uint16_t scale = 256;
+    if (!g_io4_mode_active) {
+        uint8_t br = config_get().led_brightness;
+        scale = (uint16_t)br + (br == 255 ? 1 : 0);
+    }
+
     for (int i = 0; i < NUM_LEDS; i++) {
+        uint32_t r = ((uint32_t)g_pixels[i].r * scale) >> 8;
+        uint32_t g = ((uint32_t)g_pixels[i].g * scale) >> 8;
+        uint32_t b = ((uint32_t)g_pixels[i].b * scale) >> 8;
         // WS2812 GRB ordering
-        uint32_t grb = ((uint32_t)g_pixels[i].g << 16) |
-                       ((uint32_t)g_pixels[i].r << 8)  |
-                       ((uint32_t)g_pixels[i].b);
+        uint32_t grb = (g << 16) | (r << 8) | b;
         put_pixel(grb);
     }
 }
 
 void led_set_io4_active(bool active) {
     g_io4_mode_active = active;
+}
+
+void led_set_config_connected(bool connected) {
+    g_config_connected = connected;
+}
+
+bool led_is_config_connected() {
+    return g_config_connected;
+}
+
+void led_set_preview_mode_override(int8_t mode_override) {
+    g_preview_mode_override = mode_override;
 }
 
 // Bit position mappings for the 6 ONGEKI game RGB buttons
@@ -124,6 +145,9 @@ void led_update_reactive(uint32_t button_mask) {
 
     const auto& cfg = config_get();
     uint8_t mode = (cfg.active_mode == MODE_XINPUT) ? cfg.gamepad_led_mode : cfg.kb_led_mode;
+    if (g_preview_mode_override >= 0 && g_preview_mode_override <= LED_MODE_OFF) {
+        mode = (uint8_t)g_preview_mode_override;
+    }
 
     // 1. OFF MODE
     if (mode == LED_MODE_OFF) {
@@ -181,34 +205,35 @@ void led_update_reactive(uint32_t button_mask) {
 
         for (int i = 0; i < NUM_BUTTONS; i++) {
             uint16_t hue = (base_hue + (i * 12)) % 256;
-            g_pixels[i] = hsv_to_rgb(hue, 255, 200);
+            g_pixels[i] = hsv_to_rgb(hue, 255, 220);
         }
         for (int i = 21; i <= 23; i++) {
             uint16_t hue = (base_hue + 30) % 256;
-            g_pixels[i] = hsv_to_rgb(hue, 255, 220);
+            g_pixels[i] = hsv_to_rgb(hue, 255, 235);
         }
         for (int i = 24; i <= 26; i++) {
-            uint16_t hue = (base_hue + 180) % 256;
-            g_pixels[i] = hsv_to_rgb(hue, 255, 220);
+            uint16_t hue = (base_hue + 150) % 256;
+            g_pixels[i] = hsv_to_rgb(hue, 255, 235);
         }
         led_show();
         return;
     }
 
-    // 5. INVERTED REACTIVE MODE (Solid ON by default, fades to black on press)
+    // 5. INVERTED REACTIVE MODE (Solid ON by default, turns off on press)
     if (mode == LED_MODE_INVERTED_REACTIVE) {
         const uint8_t recover_rate = 18;
 
         for (int i = 0; i < NUM_BUTTONS; i++) {
             RGBColor target(cfg.led_colors[i][0], cfg.led_colors[i][1], cfg.led_colors[i][2]);
             if ((button_mask >> i) & 1) {
-                // Button pressed -> turn off / dim
                 g_pixels[i] = RGBColor(0, 0, 0);
             } else {
-                // Smoothly recover back to target color
                 if (g_pixels[i].r < target.r) g_pixels[i].r = (uint8_t)fminf(target.r, g_pixels[i].r + recover_rate);
+                else if (g_pixels[i].r > target.r) g_pixels[i].r = target.r;
                 if (g_pixels[i].g < target.g) g_pixels[i].g = (uint8_t)fminf(target.g, g_pixels[i].g + recover_rate);
+                else if (g_pixels[i].g > target.g) g_pixels[i].g = target.g;
                 if (g_pixels[i].b < target.b) g_pixels[i].b = (uint8_t)fminf(target.b, g_pixels[i].b + recover_rate);
+                else if (g_pixels[i].b > target.b) g_pixels[i].b = target.b;
             }
         }
 
@@ -222,42 +247,62 @@ void led_update_reactive(uint32_t button_mask) {
 
     // 6. DEFAULT REACTIVE MODE (Lights up on press, logarithmic fadeout)
     const uint8_t decay = 225;
+    bool fn_active = config_is_fn_layer_active();
+    const uint8_t* fn_map = (cfg.active_mode == MODE_XINPUT) ? cfg.fn_gamepad_map : cfg.fn_keymap;
 
     for (int i = 0; i < NUM_BUTTONS; i++) {
         if ((button_mask >> i) & 1) {
             g_pixels[i] = RGBColor(cfg.led_colors[i][0], cfg.led_colors[i][1], cfg.led_colors[i][2]);
         } else {
-            g_pixels[i].r = fade_val(g_pixels[i].r, decay);
-            g_pixels[i].g = fade_val(g_pixels[i].g, decay);
-            g_pixels[i].b = fade_val(g_pixels[i].b, decay);
+            uint8_t r = fade_val(g_pixels[i].r, decay);
+            uint8_t g = fade_val(g_pixels[i].g, decay);
+            uint8_t b = fade_val(g_pixels[i].b, decay);
+
+            // When FN layer is held, softly highlight switches that have an FN binding
+            if (fn_active && fn_map[i] != 0 && fn_map[i] != ACT_CODE_TRANSPARENT) {
+                uint8_t hint_r = cfg.led_colors[i][0] >> 2;
+                uint8_t hint_g = cfg.led_colors[i][1] >> 2;
+                uint8_t hint_b = cfg.led_colors[i][2] >> 2;
+                if (r < hint_r) r = hint_r;
+                if (g < hint_g) g = hint_g;
+                if (b < hint_b) b = hint_b;
+            }
+
+            g_pixels[i] = RGBColor(r, g, b);
         }
     }
 
-    // Underglow LEDs
-    bool left_active = (button_mask & 0x0003FF) != 0;
-    bool right_active = (button_mask & 0x0FFC00) != 0;
+    // Underglow LEDs: softly glow at ~18% of configured underglow color when idle, boost to 100% on wing press
+    bool left_active = (button_mask & 0x0003FFu) != 0;
+    bool right_active = (button_mask & 0x0FFC00u) != 0;
 
-    RGBColor left_underglow = left_active ? 
-        RGBColor(cfg.underglow_left[0], cfg.underglow_left[1], cfg.underglow_left[2]) : 
-        RGBColor(5, 10, 25);
-    RGBColor right_underglow = right_active ? 
-        RGBColor(cfg.underglow_right[0], cfg.underglow_right[1], cfg.underglow_right[2]) : 
-        RGBColor(25, 5, 15);
+    RGBColor ug_l_full(cfg.underglow_left[0], cfg.underglow_left[1], cfg.underglow_left[2]);
+    RGBColor ug_r_full(cfg.underglow_right[0], cfg.underglow_right[1], cfg.underglow_right[2]);
+    RGBColor ug_l_idle(cfg.underglow_left[0] >> 3, cfg.underglow_left[1] >> 3, cfg.underglow_left[2] >> 3);
+    RGBColor ug_r_idle(cfg.underglow_right[0] >> 3, cfg.underglow_right[1] >> 3, cfg.underglow_right[2] >> 3);
 
     for (int i = 21; i <= 23; i++) {
-        if (left_active) g_pixels[i] = left_underglow;
-        else {
-            g_pixels[i].r = fade_val(g_pixels[i].r, decay) + 2;
-            g_pixels[i].g = fade_val(g_pixels[i].g, decay) + 4;
-            g_pixels[i].b = fade_val(g_pixels[i].b, decay) + 8;
+        if (left_active) {
+            g_pixels[i] = ug_l_full;
+        } else {
+            uint8_t r = fade_val(g_pixels[i].r, decay);
+            uint8_t g = fade_val(g_pixels[i].g, decay);
+            uint8_t b = fade_val(g_pixels[i].b, decay);
+            g_pixels[i].r = (r > ug_l_idle.r) ? r : ug_l_idle.r;
+            g_pixels[i].g = (g > ug_l_idle.g) ? g : ug_l_idle.g;
+            g_pixels[i].b = (b > ug_l_idle.b) ? b : ug_l_idle.b;
         }
     }
     for (int i = 24; i <= 26; i++) {
-        if (right_active) g_pixels[i] = right_underglow;
-        else {
-            g_pixels[i].r = fade_val(g_pixels[i].r, decay) + 8;
-            g_pixels[i].g = fade_val(g_pixels[i].g, decay) + 2;
-            g_pixels[i].b = fade_val(g_pixels[i].b, decay) + 4;
+        if (right_active) {
+            g_pixels[i] = ug_r_full;
+        } else {
+            uint8_t r = fade_val(g_pixels[i].r, decay);
+            uint8_t g = fade_val(g_pixels[i].g, decay);
+            uint8_t b = fade_val(g_pixels[i].b, decay);
+            g_pixels[i].r = (r > ug_r_idle.r) ? r : ug_r_idle.r;
+            g_pixels[i].g = (g > ug_r_idle.g) ? g : ug_r_idle.g;
+            g_pixels[i].b = (b > ug_r_idle.b) ? b : ug_r_idle.b;
         }
     }
 
@@ -267,6 +312,14 @@ void led_update_reactive(uint32_t button_mask) {
 void led_calibration_animation(CalibStage stage, bool achieved, float lever_ratio) {
     memset(g_pixels, 0, sizeof(g_pixels));
 
+    // Live lever position cursor along the 8 bottom row buttons:
+    // Left-to-right physical order: GP5(5), GP6(6), GP7(7), GP8(8), GP15(15), GP16(16), GP17(17), GP18(18)
+    static const uint8_t BOTTOM_BAR[8] = { 5, 6, 7, 8, 15, 16, 17, 18 };
+    int pos_idx = (int)lroundf(lever_ratio * 7.0f);
+    if (pos_idx < 0) pos_idx = 0;
+    if (pos_idx > 7) pos_idx = 7;
+    g_pixels[BOTTOM_BAR[pos_idx]] = RGBColor(60, 180, 255);
+
     if (stage == STAGE_LEFT) {
         RGBColor col = achieved ? RGBColor::Green() : RGBColor::Amber();
         g_pixels[0] = col; // Left Menu (D1)
@@ -275,6 +328,7 @@ void led_calibration_animation(CalibStage stage, bool achieved, float lever_rati
         g_pixels[3] = col; // Left Green (D4)
         g_pixels[4] = col; // Left Blue (D5)
         for (int i = 21; i <= 23; i++) g_pixels[i] = col; // Left Underglow
+        if (achieved) g_pixels[20] = RGBColor::Cyan();    // Prompt GP20 (Fn) to confirm Left
     } else if (stage == STAGE_RIGHT) {
         RGBColor col = achieved ? RGBColor::Green() : RGBColor::Amber();
         g_pixels[10] = col; // Right Menu (D11)
@@ -283,11 +337,12 @@ void led_calibration_animation(CalibStage stage, bool achieved, float lever_rati
         g_pixels[13] = col; // Right Green (D14)
         g_pixels[14] = col; // Right Blue (D15)
         for (int i = 24; i <= 26; i++) g_pixels[i] = col; // Right Underglow
+        if (achieved) g_pixels[20] = RGBColor::Cyan();    // Prompt GP20 (Fn) to confirm Right
     } else if (stage == STAGE_CENTER) {
-        RGBColor col = RGBColor::Cyan();
+        RGBColor col = achieved ? RGBColor::Cyan() : RGBColor::Amber();
         g_pixels[20] = RGBColor::Green(); // Mid Space / Fn (D21)
-        g_pixels[3]  = col; // Left Green (D4)
-        g_pixels[13] = col; // Right Green (D14)
+        g_pixels[3]  = col;               // Left Green (D4)
+        g_pixels[13] = col;               // Right Green (D14)
     }
 
     led_show();
